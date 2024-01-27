@@ -1,18 +1,22 @@
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from django.shortcuts import render
+from rest_framework.decorators import api_view,permission_classes,authentication_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from rest_framework.permissions import AllowAny
+from rest_framework import status
 from .models import *
 from .serializers import *
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate,login
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.authentication import TokenAuthentication
 
 
-@api_view(['POST'])
+@ api_view(['POST'])
+@csrf_exempt
 def author_signup(request):
-    serializer = AuthorSerializer(data=request.data)
+    serializer=AuthorSerializer(data=request.data)
     if serializer.is_valid():
-        user = serializer.save()
+        user=serializer.save()
         response_data = {
             'user_id': user.id,
             'registration_code': user.author.registration_code,
@@ -21,24 +25,24 @@ def author_signup(request):
         return Response(response_data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def common_login(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
+    username=request.data.get('username')
+    password=request.data.get('password')
 
     if not username or not password:
         return Response({'error': 'Both username and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = authenticate(request, username=username, password=password)
+    user=authenticate(request,username=username,password=password)
 
     if user is not None:
-        login(request, user)
-        response_data = {
+        login(request,user)
+        response_data={
             'user_id': user.id,
             'username': user.username,
             'message': 'Login successful.'
+
         }
         return Response(response_data, status=status.HTTP_200_OK)
     else:
@@ -56,7 +60,6 @@ def add_genre(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def get_all_authors(request):
@@ -72,7 +75,6 @@ def get_all_authors(request):
         author_data['books'] = book_serializer.data
         authors_data.append(author_data)
     return Response(authors_data, status=status.HTTP_200_OK)
-
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
@@ -106,7 +108,6 @@ def get_books_of_author(request, author_id):
 
     return Response(serializer.data, status=status.HTTP_200_OK)
 
-
 @api_view(['DELETE'])
 @permission_classes([IsAdminUser])
 def delete_genre(request, genre_id):
@@ -118,7 +119,6 @@ def delete_genre(request, genre_id):
     genre.delete()
 
     return Response({'message': 'Genre deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -136,7 +136,6 @@ def add_book(request):
         return Response({'message': 'Book added successfully.'}, status=status.HTTP_201_CREATED)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
@@ -158,7 +157,6 @@ def edit_book(request, book_id):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def export_books_by_genre(request, genre_id):
@@ -169,7 +167,21 @@ def export_books_by_genre(request, genre_id):
 
     serializer = BookSerializer(books, many=True)
 
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_all_authors_protected(request):
+    authors = Author.objects.all()
+    serializer = AuthorSerializer(authors, many=True)
 
+    authors_data = []
+    for author_data in serializer.data:
+        # Include books data for each author
+        author = Author.objects.get(id=author_data['id'])
+        books = Book.objects.filter(author=author)
+        book_serializer = BookSerializer(books, many=True)
+        author_data['books'] = book_serializer.data
+        authors_data.append(author_data)
+
+    return Response(authors_data)
 from django.shortcuts import render
-
-# Create your views here.

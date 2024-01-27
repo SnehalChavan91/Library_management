@@ -1,6 +1,5 @@
 from django.db import models
 
-
 # Create your models here.
 from django.contrib.auth import get_user_model
 
@@ -12,7 +11,7 @@ class Author(models.Model):
     email = models.EmailField()
     city = models.CharField(max_length=50)
 
-    registration_code = models.CharField(max_length=10, unique=True)
+    #registration_code = models.CharField(max_length=10, unique=True)
 
 
     def __str__(self):
